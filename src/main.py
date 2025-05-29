@@ -8,17 +8,23 @@ import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
 from pydantic import BaseModel, Field
 
+
+# TODO: Remove this once we've published the Fern SDK
+# For now, we:
+# 1. mkdir src/modules
+# 2. ln -s /path/to/external-sdks/build/fern/sdks/python/* src/modules
+# 3. Add necessary lines in src/modules/client.py and src/modules/core/client_wrapper.py to propagate the sandboxes_token
+from modules.client import Asyncanduril, anduril
+
 from ais import AIS
 from integration import AISLatticeIntegration
-from lattice import Lattice
 
 DATASET_PATH = "var/ais_vessels.csv"
-
 
 class Config(BaseModel):
     lattice_ip: str = Field(alias="lattice-ip")
     lattice_bearer_token: str = Field(alias="lattice-bearer-token")
-    sandbox_token: str = Field(alias="sandbox-token")
+    sandboxes_token: str = Field(alias="sandboxes-token")
     entity_update_rate_seconds: int = Field(alias="entity-update-rate-seconds")
     vessel_mmsi: list[int] = Field(alias="vessel-mmsi")
     ais_generate_interval_seconds: int = Field(
@@ -54,7 +60,11 @@ if __name__ == "__main__":
 
     ais_data = AIS(logger, DATASET_PATH, cfg.vessel_mmsi)
 
-    lattice_api = Lattice(logger, cfg.lattice_ip, cfg.lattice_bearer_token, cfg.sandbox_token)
+    lattice_api = anduril(
+        base_url=cfg.lattice_ip, 
+        token=cfg.lattice_bearer_token, 
+        sandboxes_token=cfg.sandboxes_token,
+        )
 
     ais_lattice_integration_hook = AISLatticeIntegration(
         logger, lattice_api, ais_data
